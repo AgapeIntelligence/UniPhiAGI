@@ -45,7 +45,7 @@ def run_demo(text: str = "Hello world"):
     # 3. Lattice update
     # -----------------------
     lattice = DeterministicLattice(dim=512)
-    lattice_state = lattice.forward()  # forward() now handles deterministic updates
+    lattice_state = lattice.forward(bloom)  # deterministic update using bloom
 
     # -----------------------
     # 4. Planning / reasoning
