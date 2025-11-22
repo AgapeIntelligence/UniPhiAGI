@@ -4,11 +4,11 @@ Coordinates input → lattice update → memory → output.
 """
 
 import torch
-from src.lattice_engine import DeterministicLattice
-from src.input_adapter import InputAdapter
-from src.output_adapter import OutputAdapter
-from src.uniphi_os.engine import GenesisGeometry
-from src.safety_monitor import SafetyMonitor
+from Src.lattice_engine import DeterministicLattice
+from Src.input_adapter import InputAdapter
+from Src.output_adapter import OutputAdapter
+from Src.uniphi_os.engine import GenesisGeometry
+from Src.safety_monitor import SafetyMonitor
 
 def main():
     # Core engine
