@@ -1,62 +1,96 @@
-import torch
-from torch import nn
+"""
+Deterministic Lattice Engine (vΩ)
+Integrated with UniPhiOS GenesisGeometry core.
 
+Each lattice node is a 512D state vector.
+Each update cycle:
+    1. Collect neighbor states
+    2. Fuse neighbor fields (normalized sum)
+    3. Feed through GenesisGeometry (UniPhiOS engine)
+    4. Update node state with identity_next (512D)
+"""
+
+import torch
+import torch.nn as nn
+from .uniphi_os import (
+    GenesisGeometry,
+    fuse_fields,
+    normalize_vector,
+)
 
 class DeterministicLattice(nn.Module):
     """
-    DeterministicLattice
-
-    A stable, fully deterministic state-update engine. This module represents the
-    core AGI state transition function: a structured mapping from an input vector
-    and current state to a new lattice state.
-
-    Design goals:
-    - No randomness
-    - Predictable dynamics
-    - Numeric stability (LayerNorm + residual gating)
-    - Compatible with UniPhiOS vector geometry
+    128-node deterministic lattice.
+    Node dimension = 512.
+    
+    UniPhiOS (GenesisGeometry) is used as the nonlinear core update engine.
     """
 
-    def __init__(self, dim: int = 512):
+    def __init__(
+        self,
+        num_nodes: int = 128,
+        dim: int = 512,
+        device: str = "cpu",
+        dtype: torch.dtype = torch.float32,
+    ):
         super().__init__()
+
+        self.num_nodes = num_nodes
         self.dim = dim
+        self.device = torch.device(device)
+        self.dtype = dtype
 
-        # Core transformation layers
-        self.in_proj = nn.Linear(dim, dim, bias=False)
-        self.state_proj = nn.Linear(dim, dim, bias=False)
-        self.mix = nn.Linear(2 * dim, dim, bias=False)
+        # Node states: (128, 512)
+        self.state = nn.Parameter(
+            torch.randn(num_nodes, dim, device=self.device, dtype=self.dtype) * 0.01
+        )
 
-        # Stability components
-        self.norm = nn.LayerNorm(dim)
-        self.gate = nn.Sigmoid()
+        # Deterministic adjacency: ring lattice
+        idx = torch.arange(num_nodes)
+        self.register_buffer("left", (idx - 1) % num_nodes)
+        self.register_buffer("right", (idx + 1) % num_nodes)
+
+        # UniPhiOS engine
+        self.engine = GenesisGeometry(device=device, dtype=dtype)
 
     @torch.no_grad()
-    def forward(self, x: torch.Tensor, state: torch.Tensor) -> torch.Tensor:
+    def reset(self):
+        """Reinitialize states deterministically."""
+        with torch.no_grad():
+            self.state.data = torch.randn(
+                self.num_nodes, self.dim,
+                device=self.device,
+                dtype=self.dtype
+            ) * 0.01
+
+    def forward(self):
         """
-        Forward pass applying a deterministic update:
-
-        new_state = state + g * norm(mix([Tx, Ts]))
-
-        Args:
-            x:      (batch, dim) input vector
-            state:  (batch, dim) current lattice state
-
+        Perform one full lattice update cycle.
         Returns:
-            new_state: (batch, dim)
+            new_state: (128, 512) updated node states
         """
+        x = self.state  # (N, 512)
 
-        # Linear transforms
-        tx = self.in_proj(x)
-        ts = self.state_proj(state)
+        # 1. Collect neighbors
+        left_v = x[self.left]   # (N,512)
+        right_v = x[self.right] # (N,512)
 
-        # Concatenate and mix
-        h = self.mix(torch.cat([tx, ts], dim=-1))
+        # 2. Fuse fields (normalized sum of center + neighbors)
+        fused = fuse_fields(x, left_v, right_v)  # (N,512)
 
-        # Gate controls update magnitude
-        g = self.gate((tx * ts).sum(dim=-1, keepdim=True))
+        # 3. Pass fused vector through UniPhiOS engine
+        bloom, identity_next, crown, triad, spiral = self.engine(fused)
 
-        # Deterministic update
-        delta = self.norm(h)
-        new_state = state + g * delta
+        # identity_next is (N,512) and already layer-normalized
+        new_state = identity_next
 
-        return new_state
+        # Update internal state
+        self.state.data = new_state
+
+        return {
+            "state": new_state,
+            "bloom": bloom,
+            "crown": crown,
+            "triad": triad,
+            "spiral": spiral,
+        }
