@@ -1,3 +1,27 @@
-torch
-pytorch-lightning
+# --- Core scientific stack ---
 numpy
+scipy
+protobuf
+
+# Torch: allow Replit to choose a valid 3.12-compatible build
+torch
+
+# --- Machine learning / training infrastructure ---
+pytorch-lightning==2.3.3
+
+# --- Optional utilities for UniPhiOS ---
+einops
+tqdm
+
+# --- Safety + planning layers ---
+networkx
+
+# --- AGI IO ---
+transformers
+sentencepiece
+
+# --- Internal / structural ---
+typing-extensions
+
+# --- Replit-specific stability ---
+uvloop
