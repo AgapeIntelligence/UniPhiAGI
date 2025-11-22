@@ -15,15 +15,15 @@ This is a minimal scientific demo, not a benchmark.
 
 import torch
 
-from src.input_adapter import InputAdapter
-from src.output_adapter import OutputAdapter
-from src.lattice_engine import DeterministicLattice
-from src.planning_engine import PlanningEngine
-from src.memory_store import MemoryStore
-from src.safety_monitor import SafetyMonitor
+from Src.input_adapter import InputAdapter
+from Src.output_adapter import OutputAdapter
+from Src.lattice_engine import DeterministicLattice
+from Src.planning_engine import PlanningEngine
+from Src.memory_store import MemoryStore
+from Src.safety_monitor import SafetyMonitor
 
 # Integrated UniPhiOS core
-from src.uniphi_os.engine import GenesisGeometry
+from Src.uniphi_os.engine import GenesisGeometry
 
 
 def run_demo(text: str = "Hello world"):
@@ -45,7 +45,7 @@ def run_demo(text: str = "Hello world"):
     # 3. Lattice update
     # -----------------------
     lattice = DeterministicLattice(dim=512)
-    lattice_state = lattice.update(bloom)
+    lattice_state = lattice.forward()  # forward() now handles deterministic updates
 
     # -----------------------
     # 4. Planning / reasoning
